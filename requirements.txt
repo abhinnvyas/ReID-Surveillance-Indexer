@@ -1,0 +1,8 @@
+torch
+torchvision
+numpy
+opencv-python
+faiss-cpu
+tqdm
+streamlit
+open_clip_torch

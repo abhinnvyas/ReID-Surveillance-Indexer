@@ -1,0 +1,10 @@
+venv/
+data
+detections
+__pycache__
+embeddings/__pycache__
+clustering/__pycache__
+timeline/__pycache__
+ui/__pycache__
+scanner/__pycache__
+indexing/__pycache_
