@@ -2,16 +2,17 @@ import streamlit as st
 import json
 import cv2
 from collections import defaultdict
+from merge_identity import merge_identities
 
-# -----------------------------
+# ==============================
 # PAGE CONFIG
-# -----------------------------
+# ==============================
 st.set_page_config(layout="wide")
-st.title("ReID Identity Viewer")
+st.title("⭐ ReID Identity Viewer")
 
-# -----------------------------
+# ==============================
 # LOAD DATA
-# -----------------------------
+# ==============================
 with open("data/metadata.json") as f:
     metadata = json.load(f)
 
@@ -21,38 +22,41 @@ with open("data/identities.json") as f:
 with open("data/identity_registry.json") as f:
     registry = json.load(f)
 
-
-# -----------------------------
-# GROUP DATA BY IDENTITY
-# -----------------------------
+# ==============================
+# GROUP BY IDENTITY
+# ==============================
 groups = defaultdict(list)
 
 for meta, pid in zip(metadata, identities):
     groups[pid].append(meta)
 
-# sort identities by size (largest first)
+# sort by number of detections (largest first)
 identity_ids = sorted(
     groups.keys(),
     key=lambda x: len(groups[x]),
     reverse=True
 )
 
-# -----------------------------
-# SIDEBAR - IDENTITY LIST
-# -----------------------------
-st.sidebar.title(f"Identities ({len(identity_ids)})")
+# ==============================
+# SIDEBAR LIST
+# ==============================
+st.sidebar.title("Identities")
 
-# persistent selection
 if "selected_id" not in st.session_state:
     st.session_state.selected_id = identity_ids[0]
 
-# identity buttons
 for pid in identity_ids:
 
     info = registry[str(pid)]
-    label = f"{pid} | {info['confidence']} | {info['num_detections']}"
 
-    # highlight selected identity
+    label = (
+        f"{pid} | "
+        f"{info['confidence'].upper()} | "
+        f"{info['num_detections']} | "
+        f"{info['consistency']:.2f}"
+    )
+
+    # highlight active identity
     if pid == st.session_state.selected_id:
         label = "➡ " + label
 
@@ -60,17 +64,41 @@ for pid in identity_ids:
         st.session_state.selected_id = pid
 
 selected_id = st.session_state.selected_id
+info = registry[str(selected_id)]
 
-# -----------------------------
-# MAIN VIEW
-# -----------------------------
+# ==============================
+# HEADER INFO
+# ==============================
 st.subheader(f"Identity {selected_id}")
 
-st.write(f"Total detections: {len(groups[selected_id])}")
+st.write(
+    f"""
+**Confidence:** {info['confidence'].upper()}  
+**Detections:** {info['num_detections']}  
+**Consistency:** {info['consistency']:.3f}  
+**First Seen:** {info['first_seen']}  
+**Last Seen:** {info['last_seen']}
+"""
+)
 
-# -----------------------------
-# IMAGE GRID DISPLAY
-# -----------------------------
+st.markdown("---")
+st.markdown("### 🔧 Merge Identities")
+
+merge_target = st.number_input(
+    "Merge current identity INTO:",
+    min_value=0,
+    step=1
+)
+
+if st.button("Merge"):
+    merge_identities(selected_id, merge_target)
+    st.success(f"Merged {selected_id} → {merge_target}")
+    st.experimental_rerun()
+
+
+# ==============================
+# IMAGE GRID
+# ==============================
 cols_per_row = 6
 cols = st.columns(cols_per_row)
 
@@ -83,9 +111,7 @@ for i, item in enumerate(groups[selected_id]):
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    col = cols[i % cols_per_row]
-
-    with col:
+    with cols[i % cols_per_row]:
         st.image(
             img,
             caption=f"{item['camera_id']}\n{item['timestamp']}",
