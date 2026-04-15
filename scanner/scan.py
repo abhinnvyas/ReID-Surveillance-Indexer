@@ -17,6 +17,9 @@ def scan_detections():
         camera_id = cam_folder.replace("camera_", "").replace("{", "").replace("}", "")
 
         for file in os.listdir(cam_path):
+            
+            if not file.endswith(".ppm"):
+                continue
 
             parts = file.split("_")
 
