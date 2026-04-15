@@ -33,10 +33,12 @@ def scan_detections():
             except:
                 continue
 
+            jpg_file = file.replace(".ppm", ".jpg")
+
             results.append({
                 "camera_id": camera_id,
                 "timestamp": timestamp,
-                "path": os.path.join(cam_path, file)
+                "path": os.path.join(cam_path, jpg_file)
             })
 
     results.sort(key=lambda x: x["timestamp"])

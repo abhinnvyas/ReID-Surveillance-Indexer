@@ -13,6 +13,8 @@ from pipelinem.pipeline_status import (
     stop_requested
 )
 
+from database.mongo_client import pipeline_status_col
+
 app = FastAPI()
 
 
@@ -85,14 +87,18 @@ def stop():
 # STATUS
 # ---------------------------
 
+
 @app.get("/pipeline-status")
-def status():
+def pipeline_status():
 
-    return {
-        "success": True,
-        "data": get_status()
-    }
+    doc = pipeline_status_col.find_one({"_id": "main_pipeline"})
 
+    if not doc:
+        return {"data": {"status": "IDLE"}}
+
+    doc["_id"] = str(doc["_id"])
+
+    return {"data": doc}
 
 # ---------------------------
 # IMAGE HOSTING

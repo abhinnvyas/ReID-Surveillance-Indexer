@@ -6,48 +6,67 @@ from timeline.builder import build_timeline
 from timeline.identity_registry import build_identity_registry
 from patterns.daily_pattern_detector import detect_patterns
 
-from pipelinem.pipeline_status import stop_requested
+from pipelinem.pipeline_status import update_pipeline
 
+from convertdetections.convert_detections import convert_detections
+from database.persist_pipeline_results import (
+    persist_observations,
+    persist_identities
+)
 
-def check_stop(stage):
-
-    if stop_requested():
-        print(f"Pipeline stopped before stage: {stage}")
-        return True
-
-    return False
+TOTAL_STEPS = 8
 
 
 def run_pipeline():
 
-    print("Pipeline started")
+    step = 1
 
-    if check_stop("scan_detections"):
-        return
+    update_pipeline(status="RUNNING", progress=0)
+
+    update_pipeline(stage="Converting Detection Images",progress=(step / TOTAL_STEPS) * 100, eta=23)
+    convert_detections()
+    step += 1
+
+    update_pipeline(stage="Scanning Detections", progress=(step / TOTAL_STEPS) * 100, eta=25)
     scan_detections()
+    step += 1
 
-    if check_stop("extract_embeddings"):
-        return
+    update_pipeline(stage="Extracting Embeddings", progress=(step / TOTAL_STEPS) * 100, eta=22)
     extract_embeddings()
+    step += 1
 
-    if check_stop("cluster_identities"):
-        return
+    update_pipeline(stage="Clustering Identities", progress=(step / TOTAL_STEPS) * 100, eta=18)
     cluster_identities()
+    step += 1
 
-    if check_stop("temporal_merge"):
-        return
+    update_pipeline(stage="Temporal Merge", progress=(step / TOTAL_STEPS) * 100, eta=15)
     temporal_merge()
+    step += 1
 
-    if check_stop("build_timeline"):
-        return
+    update_pipeline(stage="Building Timeline", progress=(step / TOTAL_STEPS) * 100, eta=10)
     build_timeline()
 
-    if check_stop("build_identity_registry"):
-        return
+    update_pipeline(stage="Persisting Observations", progress=75, eta=5)
+    persist_observations()
+
+    step += 1
+
+    update_pipeline(stage="Building Identity Registry", progress=(step / TOTAL_STEPS) * 100, eta=6)
     build_identity_registry()
 
-    if check_stop("detect_patterns"):
-        return
+    update_pipeline(stage="Persisting Identities", progress=90, eta=2)
+    persist_identities()
+
+    step += 1
+
+    update_pipeline(stage="Detecting Patterns", progress=(step / TOTAL_STEPS) * 100, eta=2)
     detect_patterns()
+
+    update_pipeline(
+        status="COMPLETED",
+        progress=100,
+        stage="Completed",
+        eta=0,
+    )
 
     print("Pipeline complete.")
